@@ -1,0 +1,306 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Interactive Face Recognition Attendance</title>
+<style>
+  body { font-family: Arial, sans-serif; text-align:center; margin: 20px; background: #f0f2f5; }
+  h1 { color: #333; }
+  #videoElement { width: 640px; height: 480px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
+  #controls { margin: 15px 0; }
+  button {
+    font-size: 1em;
+    padding: 12px 25px;
+    margin: 0 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button#startBtn { background-color: #28a745; color: white; }
+  button#startBtn:hover { background-color: #218838; }
+  button#stopBtn { background-color: #dc3545; color: white; }
+  button#stopBtn:hover { background-color: #c82333; }
+  #spinner {
+    display: none;
+    margin: 20px auto;
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid #007bff;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg);}
+    100% { transform: rotate(360deg);}
+  }
+  #recognizedNames {
+    margin-top: 20px;
+    font-size: 1.3em;
+    color: #28a745;
+    min-height: 30px;
+  }
+
+  #successPopup {
+    display: none;
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #d4edda;
+    color: #155724;
+    border: 2px solid #c3e6cb;
+    padding: 30px 50px;
+    border-radius: 12px;
+    font-size: 1.6em;
+    box-shadow: 0 0 15px #28a745;
+  }
+</style>
+</head>
+<body>
+
+<h1>Interactive Face Recognition Attendance System</h1>
+
+<video autoplay muted id="videoElement"></video> <br/>
+
+<div id="controls">
+  <button id="startBtn">Start Camera</button>
+  <button id="stopBtn" disabled>Stop Camera</button>
+  <button id="captureBtn" disabled>Recognize & Mark Attendance</button>
+</div>
+
+<div id="spinner"></div>
+<div id="recognizedNames"></div>
+
+<div id="successPopup">✔ Attendance Marked Successfully!</div>
+
+<script>
+  const video = document.getElementById('videoElement');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const captureBtn = document.getElementById('captureBtn');
+  const spinner = document.getElementById('spinner');
+  const recognizedNamesDiv = document.getElementById('recognizedNames');
+  const successPopup = document.getElementById('successPopup');
+
+  let stream = null;
+
+  startBtn.onclick = async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      captureBtn.disabled = false;
+      recognizedNamesDiv.innerText = '';
+    } catch (err) {
+      alert('Camera access denied or not available.');
+    }
+  };
+
+  stopBtn.onclick = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      video.srcObject = null;
+    }
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    captureBtn.disabled = true;
+    spinner.style.display = 'none';
+    recognizedNamesDiv.innerText = '';
+  };
+
+  captureBtn.onclick = async () => {
+    if (!stream) return;
+
+    spinner.style.display = 'block';
+    recognizedNamesDiv.innerText = '';
+    successPopup.style.display = 'none';
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataURL = canvas.toDataURL('image/jpeg');
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/recognize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataURL })
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const data = await response.json();
+      spinner.style.display = 'none';
+
+      if (data.names && data.names.length > 0) {
+        recognizedNamesDiv.innerText = 'Recognized: ' + data.names.join(', ');
+        successPopup.style.display = 'block';
+        setTimeout(() => {
+          window.location.href = '/attendance';
+        }, 3000);
+      } else {
+        recognizedNamesDiv.innerText = 'No face recognized. Please try again.';
+      }
+    } catch (err) {
+      spinner.style.display = 'none';
+      alert('Server error: ' + err.message);
+    }
+  };
+</script>
+
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Face Recognition Attendance</title>
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+<style>
+  body { padding-top: 30px; background-color: #f8f9fa; }
+  #videoElement {
+    width: 100%;
+    max-width: 640px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+  }
+  #tick {
+    display: none;
+    font-size: 72px;
+    color: limegreen;
+  }
+  #recognizedNames {
+    margin-top: 20px;
+    font-size: 1.4em;
+    color: green;
+  }
+</style>
+</head>
+<body>
+
+<div class="container text-center">
+  <h1 class="mb-4">Face Recognition Attendance System</h1>
+
+  <video autoplay muted id="videoElement" class="mx-auto d-block rounded"></video>
+
+  <div class="my-3">
+    <button id="startBtn" class="btn btn-success me-2">Start Camera</button>
+    <button id="stopBtn" class="btn btn-danger me-2" disabled>Stop Camera</button>
+    <button id="captureBtn" class="btn btn-primary" disabled>Recognize & Mark Attendance</button>
+  </div>
+
+  <div id="spinner" class="spinner-border text-primary my-3" role="status" style="display: none;">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+
+  <div id="recognizedNames"></div>
+  <div id="tick"><i class="bi bi-check-circle-fill"></i></div>
+</div>
+
+<!-- Bootstrap Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  const video = document.getElementById('videoElement');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const captureBtn = document.getElementById('captureBtn');
+  const spinner = document.getElementById('spinner');
+  const recognizedNamesDiv = document.getElementById('recognizedNames');
+  const tick = document.getElementById('tick');
+
+  let stream = null;
+
+  startBtn.onclick = async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      captureBtn.disabled = false;
+      recognizedNamesDiv.innerText = '';
+      tick.style.display = 'none';
+    } catch (err) {
+      alert('Camera access denied or not available.');
+    }
+  };
+
+  stopBtn.onclick = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      video.srcObject = null;
+    }
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    captureBtn.disabled = true;
+    spinner.style.display = 'none';
+    recognizedNamesDiv.innerText = '';
+    tick.style.display = 'none';
+  };
+
+  function speak(text) {
+    if (!('speechSynthesis' in window)) {
+      console.log('Speech synthesis not supported.');
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  captureBtn.onclick = async () => {
+    if (!stream) return;
+
+    spinner.style.display = 'inline-block';
+    recognizedNamesDiv.innerText = '';
+    tick.style.display = 'none';
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataURL = canvas.toDataURL('image/jpeg');
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/recognize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataURL })
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const data = await response.json();
+      spinner.style.display = 'none';
+
+      if (data.names && data.names.length > 0) {
+        recognizedNamesDiv.innerText = 'Recognized: ' + data.names.join(', ');
+
+        speak(`Hello ${data.names.join(', ')}, attendance marked`);
+
+        tick.style.display = 'block';
+        setTimeout(() => {
+          tick.style.display = 'none';
+          window.location.href = '/attendance';
+        }, 3000);
+      } else {
+        recognizedNamesDiv.innerText = 'No face recognized. Please try again.';
+      }
+    } catch (err) {
+      spinner.style.display = 'none';
+      alert('Server error: ' + err.message);
+    }
+  };
+</script>
+
+</body>
+</html>
